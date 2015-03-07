@@ -38,6 +38,8 @@ GLSL =
     uniform float u_millis;
     uniform float u_energy;
 
+    uniform vec2 u_positions[16];
+
     // http://goo.gl/LrCde
     float noise( vec2 co ){
         return fract( sin( dot( co.xy, vec2( 12.9898, 78.233 ) ) ) * 43758.5453 );
@@ -59,29 +61,24 @@ GLSL =
         float step = 1.0 / u_particles;
         float n = 0.0;
         
-        for ( float i = 0.0; i <= 1.0; i += 0.025 ) {
-
-            if ( i <= limit ) {
-
-                vec2 np = vec2(n, 1-1);
+        for (int i=0;i<10;i++) {
+                vec2 np = vec2(float(i) / 10.0, 1-1);
                 
                 na = noise( np * 1.1 );
                 nb = noise( np * 2.8 );
                 nc = noise( np * 0.7 );
                 nd = noise( np * 3.2 );
 
-                pos = center;
-                pos.x += sin(t*na) * cos(t*nb) * tan(t*na*0.15) * 0.3;
-                pos.y += tan(t*nc) * sin(t*nd) * 0.1;
+               // pos = center;
+                pos.x = u_positions[i].x;
+                pos.y = u_positions[i].y;
                 
                 d = pow( 1.6*na / length( pos - position ), u_blobiness );
                 
-                if ( i < limit * 0.3333 ) a += d;
-                else if ( i < limit * 0.6666 ) b += d;
+                // split into three types (r, g, b) ish
+                if (mod(float(i), 3.0) < 1.0 ) a += d;
+                else if (mod(float(i), 3.0) < 2.0 ) b += d;
                 else c += d;
-
-                n += step;
-            }
         }
         
         vec3 col = vec3(a*c,b*c,a*b) * 0.0001 * u_brightness;
@@ -98,6 +95,12 @@ GLSL =
 
 try
     
+    socket = io.connect 'http://' + host + ':8081'
+    socket.emit 'display', null
+    CONTROLLERS = 15; # one less than u_positions length
+    controllers = [];
+    lookup = {};
+    
     gl = Sketch.create
 
         # Sketch settings
@@ -109,7 +112,7 @@ try
 
         brightness: 0.8
         blobiness: 1.5
-        particles: 40
+        particles: 10  # 40
         energy: 1.01
         scanlines: yes
 
@@ -143,7 +146,7 @@ if gl
         @.attachShader @shaderProgram, frag
         @linkProgram @shaderProgram
 
-        throw @getProgramInfoLog @shaderProgram if not @getProgramParameter @shaderProgram, @LINK_STATUS
+        throw 'Failed to initialise shaders' if not @getProgramParameter @shaderProgram, @LINK_STATUS
 
         @useProgram @shaderProgram
 
@@ -181,6 +184,42 @@ if gl
 
         # Resize to window
         do @resize
+
+        for i in [0..CONTROLLERS] by 1
+          controllers[i] = null;
+      
+        socket.on 'connected', (data) ->
+          for i in [0..CONTROLLERS] by 1
+            if controllers[i] is null
+              controllers[i] = {x:gl.width/2, y:gl.height/2}
+              lookup[data.id] = i
+              console.log 'Connected:' + i
+              break
+  
+        socket.on 'tilted', (data) ->
+          index = lookup[data.id]
+          console.log 'Tilted:' + index
+
+          controller = controllers[index];
+          # x = y because we're holding sideways!
+          controller.x += data.y * 3;
+          # negative delta here because WebGL coordinate space is upside down
+          controller.y += -data.x * 3;
+        
+          controller.x = Math.min(controller.x, gl.width);
+          controller.x = Math.max(controller.x, 0);
+          controller.y = Math.min(controller.y, gl.height);
+          controller.y = Math.max(controller.y, 0);
+        
+          particle = gl.getUniformLocation gl.shaderProgram, 'u_positions[' + (index + 1) + ']'
+          gl.uniform2f particle, controller.x / gl.width, controller.y / gl.height
+  
+        socket.on 'disconnected', (data) ->
+          controllers[lookup[data.id]] = null;
+          delete lookup[data.id];
+ 
+
+
 
     gl.updateUniforms = ->
         

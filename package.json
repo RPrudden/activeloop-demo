@@ -1,0 +1,12 @@
+{
+  "name": "activeloop-demo",
+  "description": "ActiveLoop PoC",
+  "version": "0.0.1",
+  "private": true,
+  "dependencies": {
+    "express": "3.4.0",
+    "socket.io": "0.9.16",
+    "swig": "1.0.0-rc2",
+    "coffee-script": "1.6.3"
+  }
+}

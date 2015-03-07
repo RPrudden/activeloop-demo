@@ -1,0 +1,44 @@
+<html>
+<head>
+	<!-- #container:fullscreen, :-webkit-full-screen, -->
+	<style>
+    html, body { margin: 0; overflow: hidden; width: 100%; height: 100%; background: #222; }
+    #container:-webkit-full-screen { background: #222; cursor: none; }
+    #nogl { display: none; }
+    div#url { background-color: transparent; position: absolute; z-index: 1000; left: 0; right: 0; }
+    #url p { color: #fff; text-align: center; font-family: sans-serif; opacity: 0.5; font-size: 400%; }
+	</style>
+</head>
+<body>
+	<div id="container">
+		<div id="nogl">
+			<h1>Aww, No WebGL :(</h1>
+			<p>This experiment requires WebGL to run. Please enable it, or come back and visit with a <a href="http://caniuse.com/webgl" target="_blank">compatible browser</a>.</p>
+		</div>
+		<div id="url">
+			<p>http://{{host}}:8081/</p>
+		</div>
+	</div>
+<script src="/socket.io/socket.io.js"></script>
+<script src="http://soulwire.github.io/sketch.js/js/sketch.min.js"></script>
+<script>
+    // used by main script
+    var host = '{{host}}';
+
+	var container = document.getElementById('container');
+
+	function fullscreen() { 		
+    	if (container.requestFullscreen) {
+    		container.requestFullscreen();
+    	} else if (container.webkitRequestFullScreen) {
+    		container.webkitRequestFullScreen();
+    	} else {
+        	container.mozRequestFullScreen();
+        }
+    }
+    
+	container.addEventListener("click", fullscreen)
+</script>
+<script src="/static/js/main.js"></script>
+</body>
+</html>
